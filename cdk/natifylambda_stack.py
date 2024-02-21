@@ -62,8 +62,10 @@ def handler(event, context):
             self, "UserLambdaFunction",
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="userlambda.handler",
-#               code=lambda_.S3Code(bucket=s3_bucket, key="natifylambda.zip"),
-                code=lambda_.Code.from_asset("natifylambda"),
+            # The final stack will eventually use the uploaded zip file as the code
+#           code=lambda_.S3Code(bucket=s3_bucket, key="natifylambda.zip"),
+            # The following is for generating the assets
+            code=lambda_.Code.from_asset("natifylambda"),
             environment={
                 "VPC_NAME": vpc_name
             }

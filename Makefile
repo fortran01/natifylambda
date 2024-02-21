@@ -113,14 +113,15 @@ setup-cdk:
 # Then we will package the assets and upload to S3 with our own name
 synth: setup-cdk
 	@echo $(H1)Synthesizing CloudFormation$(H1END)
+	@sed -n '66p' cdk/natifylambda_stack.py | grep -q 'code=lambda_.S3Code(bucket=s3_bucket, key="natifylambda.zip")' && echo "Proceeding with generation" || (echo "Line 65 does not contain the required string. Generation halted." && exit 1)
 	npx cdk synth --quiet
-	@sed -i '' '65s/^# /  /' cdk/natifylambda_stack.py
-	@sed -i '' '66s/^/# /' cdk/natifylambda_stack.py
+	@sed -i '' '66s/^#//' cdk/natifylambda_stack.py
+	@sed -i '' '68s/^/#/' cdk/natifylambda_stack.py
 	@echo Zipping the asset folder for natifylambda
 	@ASSET_FOLDER=$$(ls cdk.out | grep -E "asset\."); \
 	cd cdk.out && mv $$ASSET_FOLDER natifylambda && zip -r natifylambda.zip natifylambda && mv natifylambda $$ASSET_FOLDER
-	@sed -i '' '65s/^/# /' cdk/natifylambda_stack.py
-	@sed -i '' '66s/^# /  /' cdk/natifylambda_stack.py
+	@sed -i '' '66s/^/#/' cdk/natifylambda_stack.py
+	@sed -i '' '68s/^#//' cdk/natifylambda_stack.py
 	npx cdk synth > cdk.out/natifylambda.yaml
 	npx cdk bootstrap --show-template > cdk.out/bootstrap.yaml
 
