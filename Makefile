@@ -108,9 +108,21 @@ setup-cdk:
 	npm install --save-dev aws-cdk-lib
 	npm install --save-dev aws-cdk
 
+
+# First npx cdk synth will generate the assets in cdk.out directory
+# Then we will package the assets and upload to S3 with our own name
 synth: setup-cdk
 	@echo $(H1)Synthesizing CloudFormation$(H1END)
-	npx cdk synth
+	npx cdk synth --quiet
+	@sed -i '' '65s/^# /  /' cdk/natifylambda_stack.py
+	@sed -i '' '66s/^/# /' cdk/natifylambda_stack.py
+	@echo Zipping the asset folder for natifylambda
+	@ASSET_FOLDER=$$(ls cdk.out | grep -E "asset\."); \
+	cd cdk.out && mv $$ASSET_FOLDER natifylambda && zip -r natifylambda.zip natifylambda && mv natifylambda $$ASSET_FOLDER
+	@sed -i '' '65s/^/# /' cdk/natifylambda_stack.py
+	@sed -i '' '66s/^# /  /' cdk/natifylambda_stack.py
+	npx cdk synth > cdk.out/natifylambda.yaml
+	npx cdk bootstrap --show-template > cdk.out/bootstrap.yaml
 
 ###############################################################################
 # Testing
