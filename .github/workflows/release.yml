@@ -2,8 +2,8 @@ name: Release CDK Assets
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '*'
 
 # softprops/action-gh-release requires write permissions to the repository
 permissions:
