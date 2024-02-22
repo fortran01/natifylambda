@@ -110,7 +110,7 @@ setup-cdk:
 
 synth-natifylambda: setup-cdk
 	@echo $(H1)Generating the assets in cdk.out directory$(H1END)
-	@sed -n '66p' cdk/natifylambda_stack.py | grep -q 'code=lambda_.S3Code(bucket=s3_bucket, key="natifylambda.zip")' && echo "Proceeding with generation" || (echo "Line 65 does not contain the required string. Generation halted." && exit 1)
+	@sed -n '40p' cdk/natify_lambda_stack.py | grep -q 'code=lambda_.S3Code(bucket=s3_bucket, key="natifylambda.zip")' && echo "Proceeding with generation" || (echo "Line 65 does not contain the required string. Generation halted." && exit 1)
 	npx cdk synth --quiet
 	@echo Zipping the asset folder for natifylambda
 	@ASSET_FOLDER=$$(ls cdk.out | grep -E "asset\."); \
@@ -120,12 +120,13 @@ synth-natifylambda: setup-cdk
 # Then we will package the assets and upload to S3 with our own name
 synth: synth-natifylambda
 	@echo $(H1)Synthesizing CloudFormation$(H1END)
-	@sed -i '' '66s/^#//' cdk/natifylambda_stack.py
-	@sed -i '' '68s/^/#/' cdk/natifylambda_stack.py
-	npx cdk synth > cdk.out/natifylambda.yaml
+	@sed -i '' '40s/^#//' cdk/natify_lambda_stack.py
+	@sed -i '' '42s/^/#/' cdk/natify_lambda_stack.py
+	npx cdk synth DownloaderLambdaStack > cdk.out/0_DownloaderLambdaStack.yaml
+	npx cdk synth NatifyLambdaStack > cdk.out/1_NatifyLambdaStack.yaml
 	npx cdk bootstrap --show-template > cdk.out/bootstrap.yaml
-	@sed -i '' '66s/^/#/' cdk/natifylambda_stack.py
-	@sed -i '' '68s/^#//' cdk/natifylambda_stack.py
+	@sed -i '' '40s/^/#/' cdk/natify_lambda_stack.py
+	@sed -i '' '42s/^#//' cdk/natify_lambda_stack.py
 
 ###############################################################################
 # Testing
