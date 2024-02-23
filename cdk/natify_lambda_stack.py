@@ -24,7 +24,11 @@ class NatifyLambdaStack(Stack):
                 "NatifyLambdaPolicy": iam.PolicyDocument(
                     statements=[
                         iam.PolicyStatement(
-                            actions=["ec2:DescribeSubnets", "ec2:ModifySubnetAttribute"],
+                            actions=[
+                                "ec2:DescribeVpcs",
+                                "ec2:DescribeSubnets",
+                                "ec2:ModifySubnetAttribute"
+                            ],
                             resources=["*"]
                         )
                     ]
@@ -36,7 +40,7 @@ class NatifyLambdaStack(Stack):
         user_lambda = lambda_.Function(
             self, "UserLambdaFunction",
             runtime=lambda_.Runtime.PYTHON_3_12,
-            handler="natifylambda.handler",
+            handler="natifylambda.natifylambda.handler",
             # The final stack will eventually use the uploaded zip file as the code
 #            code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip"),
             # The following is for generating the assets
