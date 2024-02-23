@@ -1,6 +1,18 @@
-from aws_cdk import Stack, CfnParameter, aws_s3 as s3, aws_iam as iam, aws_events as events, aws_events_targets as targets, aws_lambda as lambda_, aws_lambda_destinations as destinations
+from aws_cdk import (
+    Stack, 
+    CfnParameter, 
+    aws_s3 as s3, 
+    aws_iam as iam, 
+    aws_events as events, 
+    aws_events_targets as targets, 
+    aws_lambda as lambda_, 
+    aws_lambda_destinations as destinations, 
+    Duration,
+    aws_cloudformation as cfn
+)
 from constructs import Construct
 from natifylambda import __version__ as natifylambda_version
+import aws_cdk.aws_lambda_event_sources as lambda_event_sources
 
 class NatifyLambdaStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
@@ -27,7 +39,8 @@ class NatifyLambdaStack(Stack):
                             actions=[
                                 "ec2:DescribeVpcs",
                                 "ec2:DescribeSubnets",
-                                "ec2:ModifySubnetAttribute"
+                                "ec2:ModifySubnetAttribute",
+                                "lambda:PutFunctionConcurrency"  # Added permission to update function concurrency
                             ],
                             resources=["*"]
                         )
@@ -50,3 +63,26 @@ class NatifyLambdaStack(Stack):
                 "VPC_NAME": vpc_name
             }
         )
+
+        # Use a CloudFormation WaitCondition to ensure the Lambda function runs only once after deployment
+        wait_condition_handle = cfn.CfnWaitConditionHandle(self, "WaitConditionHandle")
+        wait_condition = cfn.CfnWaitCondition(
+            self, "WaitCondition",
+            handle=wait_condition_handle.ref,
+            timeout="300"
+        )
+
+        # Trigger the Lambda function immediately and only once using AWS Events Rule
+        rule = events.Rule(
+            self, "Rule",
+            schedule=events.Schedule.expression("rate(1 minute)"),
+            targets=[targets.LambdaFunction(user_lambda)],
+            enabled=False  # Initially disabled, will be enabled by the CloudFormation custom resource
+        )
+
+        # Custom resource to enable the rule, triggering the Lambda function
+        custom_resource = cfn.CfnCustomResource(
+            self, "CustomResource",
+            service_token=user_lambda.function_arn
+        )
+        custom_resource.add_dependency(wait_condition)  # Updated method name as per deprecation notice

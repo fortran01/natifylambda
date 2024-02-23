@@ -28,6 +28,13 @@ def handler(event, context):
         print(f"Modifying route table for subnet: {subnet['SubnetId']}")
         # Placeholder for route table modification logic
     
+    # Disable the lambda function after its first run by setting concurrency to 0
+    lambda_client = boto3.client('lambda')
+    lambda_client.put_function_concurrency(
+        FunctionName=context.function_name,
+        ReservedConcurrentExecutions=0
+    )
+    
     return {
         'statusCode': 200,
         'body': json.dumps('Route tables modified successfully')

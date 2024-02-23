@@ -38,6 +38,7 @@ class DownloaderLambdaStack(Stack):
         )
 
         # Define the Lambda function to download and upload the zip file
+        # that contains the natifylambda code
         downloader_lambda = lambda_.Function(
             self, "DownloaderLambdaFunction",
             runtime=lambda_.Runtime.PYTHON_3_12,
