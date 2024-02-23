@@ -26,7 +26,7 @@ class DownloaderLambdaStack(Stack):
                             resources=["arn:aws:s3:::cdk-hnb659fds-assets-*/*"]
                         ),
                         iam.PolicyStatement(
-                            actions=["lambda:PutFunctionConcurrency"],
+                            actions=["lambda:PutFunctionConcurrency", "lambda:UpdateFunctionCode"],
                             resources=[f"arn:aws:lambda:{self.region}:{self.account}:function:{self.stack_name}-*"]
                         )
                     ]
@@ -48,7 +48,10 @@ class DownloaderLambdaStack(Stack):
                 "NATIFYLAMBDA_VERSION": natifylambda_version
             },
             role=downloader_lambda_role,
-            timeout=Duration.seconds(10)
+            timeout=Duration.seconds(10),
+            reserved_concurrent_executions=None,  # Use the unreserved account concurrency
+            # Version the lambda function
+            function_name=f"downloader_lambda_{natifylambda_version.replace('.', '_')}"
         )
 
         # Trigger the downloader_lambda immediately and only once using AWS Events Rule
