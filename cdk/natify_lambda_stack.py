@@ -69,7 +69,7 @@ class NatifyLambdaStack(Stack):
         wait_condition = cfn.CfnWaitCondition(
             self, "WaitCondition",
             handle=wait_condition_handle.ref,
-            timeout="300"
+            timeout="40"  # Updated timeout to 40 seconds
         )
 
         # Trigger the Lambda function immediately and only once using AWS Events Rule
