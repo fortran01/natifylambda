@@ -26,8 +26,7 @@ def disable_state_machine(sfn_client, state_machine_name):
     if state_machine_arn:
         sfn_client.update_state_machine(
             stateMachineArn=state_machine_arn,
-            definition='{"Comment": "Disabled state machine"}',
-            roleArn=''  # Assuming the role ARN is not required for disabling
+            definition='{"Comment": "Disabled state machine"}'
         )
     else:
         print(f"State machine {state_machine_name} not found")
