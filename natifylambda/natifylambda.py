@@ -24,9 +24,20 @@ def disable_state_machine(sfn_client, state_machine_name):
             state_machine_arn = sm['stateMachineArn']
             break
     if state_machine_arn:
+        # Minimal valid state machine definition that does nothing
+        noop_definition = json.dumps({
+            "Comment": "Disabled state machine",
+            "StartAt": "NoOpState",
+            "States": {
+                "NoOpState": {
+                    "Type": "Pass",
+                    "End": True
+                }
+            }
+        })
         sfn_client.update_state_machine(
             stateMachineArn=state_machine_arn,
-            definition='{"Comment": "Disabled state machine"}'
+            definition=noop_definition
         )
     else:
         print(f"State machine {state_machine_name} not found")
