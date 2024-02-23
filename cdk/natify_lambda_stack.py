@@ -1,5 +1,6 @@
 from aws_cdk import Stack, CfnParameter, aws_s3 as s3, aws_iam as iam, aws_events as events, aws_events_targets as targets, aws_lambda as lambda_, aws_lambda_destinations as destinations
 from constructs import Construct
+from natifylambda import __version__ as natifylambda_version
 
 class NatifyLambdaStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
@@ -37,7 +38,7 @@ class NatifyLambdaStack(Stack):
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="natifylambda.handler",
             # The final stack will eventually use the uploaded zip file as the code
-#           code=lambda_.S3Code(bucket=s3_bucket, key="natifylambda.zip"),
+#            code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip"),
             # The following is for generating the assets
             code=lambda_.Code.from_asset("natifylambda"),
             role=lambda_execution_role,  # Assign the created IAM role to the Lambda function

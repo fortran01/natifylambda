@@ -4,7 +4,7 @@
 
 PROJECT_NAME=natifylambda
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-VERSION=$(shell grep __version__ $(PROJECT_NAME)/__init__.py)
+VERSION=$(shell sed -n "s/^__version__ = '\(.*\)'/\1/p" $(PROJECT_NAME)/__init__.py)
 H1="\n\n\033[0;32m\#\#\# "
 H1END=" \#\#\# \033[0m\n"
 
@@ -108,25 +108,35 @@ setup-cdk:
 	npm install --save-dev aws-cdk-lib
 	npm install --save-dev aws-cdk
 
-synth-natifylambda: setup-cdk
+clean-cdk-out:
+	@echo $(H1)Cleaning up the cdk.out directory$(H1END)
+	rm -rf cdk.out
+	@echo "cdk.out directory removed."
+
+synth-natifylambda: clean-cdk-out setup-cdk
 	@echo $(H1)Generating the assets in cdk.out directory$(H1END)
-	@sed -n '40p' cdk/natify_lambda_stack.py | grep -q 'code=lambda_.S3Code(bucket=s3_bucket, key="natifylambda.zip")' && echo "Proceeding with generation" || (echo "Line 65 does not contain the required string. Generation halted." && exit 1)
-	npx cdk synth --quiet
+	@if sed -n '41p' cdk/natify_lambda_stack.py | grep -q 'code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip")'; then \
+		echo "Proceeding with generation"; \
+	else \
+		echo "Line 41 does not contain the required string. Generation halted." && exit 1; \
+	fi
+	@npx cdk synth --quiet
 	@echo Zipping the asset folder for natifylambda
+	@echo Version: $(VERSION)
 	@ASSET_FOLDER=$$(ls cdk.out | grep -E "asset\."); \
-	cd cdk.out && mv $$ASSET_FOLDER natifylambda && zip -r natifylambda.zip natifylambda && mv natifylambda $$ASSET_FOLDER
+	cd cdk.out && mv $$ASSET_FOLDER natifylambda && zip -r natifylambda-$(VERSION).zip natifylambda && mv natifylambda $$ASSET_FOLDER
 
 # synth-natifylambda will generate the assets in cdk.out directory
 # Then we will package the assets and upload to S3 with our own name
 synth: synth-natifylambda
 	@echo $(H1)Synthesizing CloudFormation$(H1END)
-	@sed -i '' '40s/^#//' cdk/natify_lambda_stack.py
-	@sed -i '' '42s/^/#/' cdk/natify_lambda_stack.py
+	@sed -i '' '41s/^#//' cdk/natify_lambda_stack.py
+	@sed -i '' '43s/^/#/' cdk/natify_lambda_stack.py
 	npx cdk synth DownloaderLambdaStack > cdk.out/0_DownloaderLambdaStack.yaml
 	npx cdk synth NatifyLambdaStack > cdk.out/1_NatifyLambdaStack.yaml
 	npx cdk bootstrap --show-template > cdk.out/bootstrap.yaml
-	@sed -i '' '40s/^/#/' cdk/natify_lambda_stack.py
-	@sed -i '' '42s/^#//' cdk/natify_lambda_stack.py
+	@sed -i '' '41s/^/#/' cdk/natify_lambda_stack.py
+	@sed -i '' '43s/^#//' cdk/natify_lambda_stack.py
 
 ###############################################################################
 # Testing

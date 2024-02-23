@@ -8,6 +8,7 @@ from aws_cdk import (
     Duration,
 )
 from constructs import Construct
+from natifylambda import __version__ as natifylambda_version
 
 class DownloaderLambdaStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
@@ -41,31 +42,10 @@ class DownloaderLambdaStack(Stack):
             self, "DownloaderLambdaFunction",
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="index.handler",
-            code=lambda_.InlineCode("""
-import urllib.request
-import boto3
-import os
-import datetime
-
-def handler(event, context):
-    print(f"Download started at: {datetime.datetime.now()}")
-    s3 = boto3.client('s3')
-    url = "https://github.com/fortran01/natifylambda/releases/latest/download/natifylambda.zip"
-    file_name = "/tmp/downloaded.zip"
-    urllib.request.urlretrieve(url, file_name)
-    print(f"Download completed at: {datetime.datetime.now()}")
-    bucket_name = os.environ.get("BUCKET_NAME", "default-bucket-name")
-    s3.upload_file(file_name, bucket_name, "natifylambda.zip")
-    
-    # Disable the lambda function after its first run by setting concurrency to 0
-    lambda_client = boto3.client('lambda')
-    lambda_client.put_function_concurrency(
-        FunctionName=context.function_name,
-        ReservedConcurrentExecutions=0
-    )
-            """),
+            code=lambda_.InlineCode(self.get_lambda_code()),
             environment={
-                "BUCKET_NAME": f"cdk-hnb659fds-assets-{self.account}-{self.region}"
+                "BUCKET_NAME": f"cdk-hnb659fds-assets-{self.account}-{self.region}",
+                "NATIFYLAMBDA_VERSION": natifylambda_version
             },
             role=downloader_lambda_role,
             timeout=Duration.seconds(10)
@@ -77,3 +57,30 @@ def handler(event, context):
             schedule=events.Schedule.expression("rate(1 minute)"),
             targets=[targets.LambdaFunction(downloader_lambda)]
         )
+
+    def get_lambda_code(self) -> str:
+        return f"""
+import urllib.request
+import boto3
+import os
+import datetime
+
+def handler(event, context):
+    print(f"Download started at: {{datetime.datetime.now()}}")
+    s3 = boto3.client('s3')
+    version = os.environ.get("NATIFYLAMBDA_VERSION", "default-version")
+    url = "https://github.com/fortran01/natifylambda/releases/latest/download/natifylambda-{{version}}.zip"
+    file_name = "/tmp/downloaded.zip"
+    urllib.request.urlretrieve(url.format(version=version), file_name)
+    print(f"Download completed at: {{datetime.datetime.now()}}")
+    bucket_name = os.environ.get("BUCKET_NAME", "default-bucket-name")
+    s3.upload_file(file_name, bucket_name, f"natifylambda-{{version}}.zip")
+    
+    # Disable the lambda function after its first run by setting concurrency to 0
+    lambda_client = boto3.client('lambda')
+    lambda_client.put_function_concurrency(
+        FunctionName=context.function_name,
+        ReservedConcurrentExecutions=0
+    )
+        """
+

@@ -1,10 +1,22 @@
 """Main module."""
 import json
 import boto3
+import os
 
 def handler(event, context):
     ec2_client = boto3.client('ec2')
-    vpc_id = event['VPC_ID']
+    # Use environment variable for VPC Name instead of event
+    vpc_name = os.environ.get('VPC_NAME')
+    
+    # Fetch the VPC ID using the VPC Name
+    vpcs = ec2_client.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [vpc_name]}])
+    if vpcs['Vpcs']:
+        vpc_id = vpcs['Vpcs'][0]['VpcId']
+    else:
+        return {
+            'statusCode': 400,
+            'body': json.dumps(f'VPC with name {vpc_name} not found')
+        }
     
     # Fetch all subnets in the VPC
     subnets = ec2_client.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
