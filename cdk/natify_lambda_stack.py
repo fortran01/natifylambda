@@ -8,7 +8,9 @@ from aws_cdk import (
     aws_lambda as lambda_, 
     aws_lambda_destinations as destinations, 
     Duration,
-    aws_cloudformation as cfn
+    aws_cloudformation as cfn,
+    aws_stepfunctions as sfn,
+    aws_stepfunctions_tasks as tasks
 )
 from constructs import Construct
 from natifylambda import __version__ as natifylambda_version
@@ -40,7 +42,9 @@ class NatifyLambdaStack(Stack):
                                 "ec2:DescribeVpcs",
                                 "ec2:DescribeSubnets",
                                 "ec2:ModifySubnetAttribute",
-                                "lambda:PutFunctionConcurrency"  # Added permission to update function concurrency
+                                "lambda:PutFunctionConcurrency",  # Permission to update function concurrency
+                                "states:UpdateStateMachine",  # Added permission to disable the state machine
+                                "states:ListStateMachines"
                             ],
                             resources=["*"]
                         )
@@ -59,30 +63,38 @@ class NatifyLambdaStack(Stack):
             # The following is for generating the assets
             code=lambda_.Code.from_asset("natifylambda"),
             role=lambda_execution_role,  # Assign the created IAM role to the Lambda function
+            timeout=Duration.seconds(20),
             environment={
                 "VPC_NAME": vpc_name
             }
         )
 
-        # Use a CloudFormation WaitCondition to ensure the Lambda function runs only once after deployment
-        wait_condition_handle = cfn.CfnWaitConditionHandle(self, "WaitConditionHandle")
-        wait_condition = cfn.CfnWaitCondition(
-            self, "WaitCondition",
-            handle=wait_condition_handle.ref,
-            timeout="40"  # Updated timeout to 40 seconds
+        # Define a Step Function with a Wait state before invoking the Lambda function
+        wait_state = sfn.Wait(self, "Wait40Seconds", time=sfn.WaitTime.duration(Duration.seconds(40)))
+        lambda_invoke_state = tasks.LambdaInvoke(
+            self, "InvokeUserLambda",
+            lambda_function=user_lambda,
+            input_path="$",  # Modified to pass the entire input
+            result_path="$.Result"
+        )
+        definition = sfn.DefinitionBody.from_chainable(wait_state.next(lambda_invoke_state))
+        
+        state_machine_name="NatifyLambdaStateMachine"
+
+        state_machine = sfn.StateMachine(
+            self, "StateMachine",
+            state_machine_name=state_machine_name,
+            definition_body=definition,
+            timeout=Duration.minutes(5)
         )
 
-        # Trigger the Lambda function immediately and only once using AWS Events Rule
+        # Update the user_lambda environment to include STATE_MACHINE_ARN
+        user_lambda.add_environment("NATIFYLAMBDA_STATE_MACHINE_NAME", state_machine_name)
+
+        # Trigger the State Machine instead of directly invoking the Lambda function
         rule = events.Rule(
             self, "Rule",
             schedule=events.Schedule.expression("rate(1 minute)"),
-            targets=[targets.LambdaFunction(user_lambda)],
-            enabled=False  # Initially disabled, will be enabled by the CloudFormation custom resource
+            targets=[targets.SfnStateMachine(state_machine)]
         )
 
-        # Custom resource to enable the rule, triggering the Lambda function
-        custom_resource = cfn.CfnCustomResource(
-            self, "CustomResource",
-            service_token=user_lambda.function_arn
-        )
-        custom_resource.add_dependency(wait_condition)  # Updated method name as per deprecation notice

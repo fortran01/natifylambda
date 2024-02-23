@@ -3,39 +3,52 @@ import json
 import boto3
 import os
 
-def handler(event, context):
-    ec2_client = boto3.client('ec2')
-    # Use environment variable for VPC Name instead of event
-    vpc_name = os.environ.get('VPC_NAME')
-    
-    # Fetch the VPC ID using the VPC Name
+def get_vpc_id(ec2_client, vpc_name):
     vpcs = ec2_client.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [vpc_name]}])
     if vpcs['Vpcs']:
-        vpc_id = vpcs['Vpcs'][0]['VpcId']
+        return vpcs['Vpcs'][0]['VpcId']
     else:
+        return None
+
+def modify_route_tables(ec2_client, vpc_id):
+    subnets = ec2_client.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
+    for subnet in subnets['Subnets']:
+        print(f"Modifying route table for subnet: {subnet['SubnetId']}")
+        # Placeholder for route table modification logic
+
+def disable_state_machine(sfn_client, state_machine_name):
+    state_machines = sfn_client.list_state_machines()
+    state_machine_arn = None
+    for sm in state_machines['stateMachines']:
+        if sm['name'] == state_machine_name:
+            state_machine_arn = sm['stateMachineArn']
+            break
+    if state_machine_arn:
+        sfn_client.update_state_machine(
+            stateMachineArn=state_machine_arn,
+            definition='{"Comment": "Disabled state machine"}',
+            roleArn=''  # Assuming the role ARN is not required for disabling
+        )
+    else:
+        print(f"State machine {state_machine_name} not found")
+
+def handler(event, context):
+    ec2_client = boto3.client('ec2')
+    sfn_client = boto3.client('stepfunctions')
+    vpc_name = os.environ.get('VPC_NAME')
+    state_machine_name = os.environ.get('NATIFYLAMBDA_STATE_MACHINE_NAME')
+    
+    vpc_id = get_vpc_id(ec2_client, vpc_name)
+    if not vpc_id:
         return {
             'statusCode': 400,
             'body': json.dumps(f'VPC with name {vpc_name} not found')
         }
     
-    # Fetch all subnets in the VPC
-    subnets = ec2_client.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
-    
-    # Iterate over subnets and modify route tables
-    for subnet in subnets['Subnets']:
-        # Assuming the modification involves adding a specific route or similar
-        # This is a placeholder for the actual logic to modify the route table
-        print(f"Modifying route table for subnet: {subnet['SubnetId']}")
-        # Placeholder for route table modification logic
-    
-    # Disable the lambda function after its first run by setting concurrency to 0
-    lambda_client = boto3.client('lambda')
-    lambda_client.put_function_concurrency(
-        FunctionName=context.function_name,
-        ReservedConcurrentExecutions=0
-    )
+    modify_route_tables(ec2_client, vpc_id)
+    disable_state_machine(sfn_client, state_machine_name)
     
     return {
         'statusCode': 200,
-        'body': json.dumps('Route tables modified successfully')
+        'body': json.dumps('Route tables modified and state machine disabled successfully')
     }
