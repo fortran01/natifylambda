@@ -44,7 +44,8 @@ class NatifyLambdaStack(Stack):
                                 "ec2:ModifySubnetAttribute",
                                 "lambda:PutFunctionConcurrency",  # Permission to update function concurrency
                                 "states:UpdateStateMachine",  # Added permission to disable the state machine
-                                "states:ListStateMachines"
+                                "states:ListStateMachines",
+                                "events:ListRules"
                             ],
                             resources=["*"]
                         )
