@@ -72,8 +72,7 @@ def deploy_stack(stack_name, template_file, profile, parameters=None):
                 print(f"Stack {stack_name} update or creation completed successfully.")
                 break
             elif "FAILED" in status or "ROLLBACK" in status:
-                print(f"Stack {stack_name} update or creation failed with status: {status}")
-                break
+                raise Exception(f"Stack {stack_name} update or creation failed with status: {status}")
         except subprocess.CalledProcessError as e:
             print(f"Failed to get status of stack {stack_name}: {e}")
             break

@@ -5,9 +5,9 @@ from aws_cdk import (
     aws_lambda as lambda_,
     aws_events as events,
     aws_events_targets as targets,
+    aws_stepfunctions as sfn,
+    aws_stepfunctions_tasks as tasks,
     Duration,
-    CfnWaitCondition,
-    CfnWaitConditionHandle,
 )
 from constructs import Construct
 from natifylambda import __version__ as natifylambda_version
@@ -56,7 +56,6 @@ class DownloaderLambdaStack(Stack):
             role=downloader_lambda_role,
             timeout=Duration.seconds(10),
             reserved_concurrent_executions=None,  # Use the unreserved account concurrency
-            # Version the lambda function
             function_name=function_name
         )
 
@@ -67,13 +66,17 @@ class DownloaderLambdaStack(Stack):
             targets=[targets.LambdaFunction(downloader_lambda)]
         )
 
-        # Add a delay to ensure the stack finishes after around 50 seconds
-        wait_handle = CfnWaitConditionHandle(self, "WaitHandle")
-        wait_condition = CfnWaitCondition(
-            self, "WaitCondition",
-            handle=wait_handle.ref,
-            timeout="50"
+        # Define a no operation state machine that depends on the downloader_lambda
+        no_op_state = sfn.Pass(self, "NoOpState")
+        definition_body = sfn.DefinitionBody.from_chainable(no_op_state)
+        state_machine = sfn.StateMachine(
+            self, "NoOpStateMachine",
+            definition_body=definition_body,
+            state_machine_name=f"NoOpStateMachine_{natifylambda_version.replace('.', '_')}"
         )
+
+        # Add dependency to ensure the state machine is provisioned after the downloader_lambda
+        state_machine.node.add_dependency(downloader_lambda)
 
     def get_lambda_code(self) -> str:
         return f"""
