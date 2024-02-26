@@ -81,8 +81,9 @@ class NatifyLambdaStack(Stack):
         )
         definition = sfn.DefinitionBody.from_chainable(wait_state.next(lambda_invoke_state))
         
-        unique_id = str(uuid.uuid4())
-        state_machine_name = "NatifyLambdaStateMachine-" + unique_id
+        unique_id = str(uuid.uuid4())[:8]  # Truncate UUID to ensure length constraints
+        state_machine_name = "NatifySM-" + unique_id
+        state_machine_name = state_machine_name[:64]  # Ensure state machine name is within AWS limits
 
         state_machine = sfn.StateMachine(
             self, "StateMachine",
@@ -95,7 +96,8 @@ class NatifyLambdaStack(Stack):
         user_lambda.add_environment("NATIFYLAMBDA_STATE_MACHINE_NAME", state_machine_name)
 
         # Name the event rule and inject it as an environment variable to AWS Lambda
-        event_rule_name = "NatifyLambdaStateMachineRule-" + unique_id
+        event_rule_name = "NatifyRule-" + unique_id
+        event_rule_name = event_rule_name[:64]  # Ensure event rule name is within AWS limits
         rule = events.Rule(
             self, "Rule",
             rule_name=event_rule_name,
