@@ -16,7 +16,7 @@ def modify_route_tables(ec2_client, vpc_id):
         print(f"Modifying route table for subnet: {subnet['SubnetId']}")
         # Placeholder for route table modification logic
 
-def disable_state_machine(sfn_client, state_machine_name):
+def disable_state_machine(sfn_client, state_machine_name, events_client):
     state_machines = sfn_client.list_state_machines()
     state_machine_arn = None
     for sm in state_machines['stateMachines']:
@@ -39,12 +39,18 @@ def disable_state_machine(sfn_client, state_machine_name):
             stateMachineArn=state_machine_arn,
             definition=noop_definition
         )
+        # Additional logic to disable the trigger
+        rules = events_client.list_rules(NamePrefix=state_machine_name)
+        for rule in rules['Rules']:
+            events_client.disable_rule(Name=rule['Name'])
+        print(f"State machine {state_machine_name} disabled and trigger disconnected")
     else:
         print(f"State machine {state_machine_name} not found")
 
 def handler(event, context):
     ec2_client = boto3.client('ec2')
     sfn_client = boto3.client('stepfunctions')
+    events_client = boto3.client('events')  # Added for disabling the trigger
     vpc_name = os.environ.get('VPC_NAME')
     state_machine_name = os.environ.get('NATIFYLAMBDA_STATE_MACHINE_NAME')
     
@@ -56,7 +62,7 @@ def handler(event, context):
         }
     
     modify_route_tables(ec2_client, vpc_id)
-    disable_state_machine(sfn_client, state_machine_name)
+    disable_state_machine(sfn_client, state_machine_name, events_client)  # Updated to pass events_client
     
     return {
         'statusCode': 200,
