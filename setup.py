@@ -17,6 +17,7 @@ dev_require = [
     "Sphinx",
     "twine",
     'pytest',
+    'bump-my-version',
 ]
 install_requires = [
     'pip',
