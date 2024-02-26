@@ -81,4 +81,4 @@ def deploy_stack(stack_name, template_file, profile, parameters=None):
 
 if __name__ == "__main__":
     deploy_stack("DownloaderLambdaStack", "cdk.out/0_DownloaderLambdaStack.yaml", "for-sso")
-    deploy_stack("NatifyLambdaStack", "cdk.out/1_NatifyLambdaStack.yaml", "for-sso", parameters=[{"ParameterKey": "VpcName", "ParameterValue": "Production-VPC"}])
+    deploy_stack("NatifyStack", "cdk.out/1_NatifyStack.yaml", "for-sso", parameters=[{"ParameterKey": "VpcName", "ParameterValue": "Production-VPC"}])

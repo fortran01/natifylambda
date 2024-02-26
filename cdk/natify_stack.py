@@ -17,7 +17,7 @@ from natifylambda import __version__ as natifylambda_version
 import aws_cdk.aws_lambda_event_sources as lambda_event_sources
 import uuid
 
-class NatifyLambdaStack(Stack):
+class NatifyStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
