@@ -6,6 +6,8 @@ from aws_cdk import (
     aws_events as events,
     aws_events_targets as targets,
     Duration,
+    CfnWaitCondition,
+    CfnWaitConditionHandle,
 )
 from constructs import Construct
 from natifylambda import __version__ as natifylambda_version
@@ -63,6 +65,14 @@ class DownloaderLambdaStack(Stack):
             self, "Rule",
             schedule=events.Schedule.expression("rate(1 minute)"),
             targets=[targets.LambdaFunction(downloader_lambda)]
+        )
+
+        # Add a delay to ensure the stack finishes after around 50 seconds
+        wait_handle = CfnWaitConditionHandle(self, "WaitHandle")
+        wait_condition = CfnWaitCondition(
+            self, "WaitCondition",
+            handle=wait_handle.ref,
+            timeout="50"
         )
 
     def get_lambda_code(self) -> str:
