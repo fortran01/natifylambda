@@ -115,10 +115,10 @@ clean-cdk-out:
 
 synth-natifylambda: clean-cdk-out setup-cdk
 	@echo $(H1)Generating the assets in cdk.out directory$(H1END)
-	@if sed -n '64p' cdk/natify_lambda_stack.py | grep -q 'code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip")'; then \
+	@if sed -n '65p' cdk/natify_lambda_stack.py | grep -q 'code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip")'; then \
 		echo "Proceeding with generation"; \
 	else \
-		echo "Line 64 does not contain the required string. Generation halted." && exit 1; \
+		echo "Line 65 does not contain the required string. Generation halted." && exit 1; \
 	fi
 	@npx cdk synth --quiet
 	@echo Zipping the asset folder for natifylambda
@@ -130,13 +130,13 @@ synth-natifylambda: clean-cdk-out setup-cdk
 # Then we will package the assets and upload to S3 with our own name
 synth: synth-natifylambda
 	@echo $(H1)Synthesizing CloudFormation$(H1END)
-	@sed -i '' '64s/^#//' cdk/natify_lambda_stack.py
-	@sed -i '' '66s/^/#/' cdk/natify_lambda_stack.py
+	@sed -i '' '65s/^#//' cdk/natify_lambda_stack.py
+	@sed -i '' '67s/^/#/' cdk/natify_lambda_stack.py
 	npx cdk synth DownloaderLambdaStack > cdk.out/0_DownloaderLambdaStack.yaml
 	npx cdk synth NatifyLambdaStack > cdk.out/1_NatifyLambdaStack.yaml
 	npx cdk bootstrap --show-template > cdk.out/bootstrap.yaml
-	@sed -i '' '64s/^/#/' cdk/natify_lambda_stack.py
-	@sed -i '' '66s/^#//' cdk/natify_lambda_stack.py
+	@sed -i '' '65s/^/#/' cdk/natify_lambda_stack.py
+	@sed -i '' '67s/^#//' cdk/natify_lambda_stack.py
 
 release: 
 	@read -p "Increase version: major, minor, or patch? " version_type; \
@@ -146,6 +146,7 @@ release:
 		patch) bump-my-version bump patch ;; \
 		*) echo "Invalid version type. Please specify major, minor, or patch." && exit 1 ;; \
 	esac; \
+	git push --tags
 
 ###############################################################################
 # Testing

@@ -46,7 +46,8 @@ class NatifyLambdaStack(Stack):
                                 "lambda:PutFunctionConcurrency",  # Permission to update function concurrency
                                 "states:UpdateStateMachine",  # Added permission to disable the state machine
                                 "states:ListStateMachines",
-                                "events:ListRules"
+                                "events:ListRules",
+                                "events:DisableRule"
                             ],
                             resources=["*"]
                         )

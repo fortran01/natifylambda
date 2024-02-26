@@ -14,6 +14,9 @@ class DownloaderLambdaStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
+        # Define the function name early on so it can be reused
+        function_name = f"downloader_lambda_{natifylambda_version.replace('.', '_')}"
+
         # Define the IAM role for the downloader_lambda
         downloader_lambda_role = iam.Role(
             self, "DownloaderLambdaRole",
@@ -27,7 +30,7 @@ class DownloaderLambdaStack(Stack):
                         ),
                         iam.PolicyStatement(
                             actions=["lambda:PutFunctionConcurrency", "lambda:UpdateFunctionCode"],
-                            resources=[f"arn:aws:lambda:{self.region}:{self.account}:function:{self.stack_name}-*"]
+                            resources=[f"arn:aws:lambda:{self.region}:{self.account}:function:{function_name}"]
                         )
                     ]
                 )
@@ -52,7 +55,7 @@ class DownloaderLambdaStack(Stack):
             timeout=Duration.seconds(10),
             reserved_concurrent_executions=None,  # Use the unreserved account concurrency
             # Version the lambda function
-            function_name=f"downloader_lambda_{natifylambda_version.replace('.', '_')}"
+            function_name=function_name
         )
 
         # Trigger the downloader_lambda immediately and only once using AWS Events Rule
