@@ -138,6 +138,15 @@ synth: synth-natifylambda
 	@sed -i '' '62s/^/#/' cdk/natify_lambda_stack.py
 	@sed -i '' '64s/^#//' cdk/natify_lambda_stack.py
 
+release: 
+	@read -p "Increase version: major, minor, or patch? " version_type; \
+	case $$version_type in \
+		major) bump-my-version major ;; \
+		minor) bump-my-version minor ;; \
+		patch) bump-my-version patch ;; \
+		*) echo "Invalid version type. Please specify major, minor, or patch." && exit 1 ;; \
+	esac; \
+
 ###############################################################################
 # Testing
 ###############################################################################
