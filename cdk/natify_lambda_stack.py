@@ -15,6 +15,7 @@ from aws_cdk import (
 from constructs import Construct
 from natifylambda import __version__ as natifylambda_version
 import aws_cdk.aws_lambda_event_sources as lambda_event_sources
+import uuid
 
 class NatifyLambdaStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
@@ -80,7 +81,8 @@ class NatifyLambdaStack(Stack):
         )
         definition = sfn.DefinitionBody.from_chainable(wait_state.next(lambda_invoke_state))
         
-        state_machine_name="NatifyLambdaStateMachine"
+        unique_id = str(uuid.uuid4())
+        state_machine_name = "NatifyLambdaStateMachine-" + unique_id
 
         state_machine = sfn.StateMachine(
             self, "StateMachine",
@@ -92,10 +94,15 @@ class NatifyLambdaStack(Stack):
         # Update the user_lambda environment to include STATE_MACHINE_ARN
         user_lambda.add_environment("NATIFYLAMBDA_STATE_MACHINE_NAME", state_machine_name)
 
-        # Trigger the State Machine instead of directly invoking the Lambda function
+        # Name the event rule and inject it as an environment variable to AWS Lambda
+        event_rule_name = "NatifyLambdaStateMachineRule-" + unique_id
         rule = events.Rule(
             self, "Rule",
+            rule_name=event_rule_name,
             schedule=events.Schedule.expression("rate(1 minute)"),
             targets=[targets.SfnStateMachine(state_machine)]
         )
+
+        # Inject the event rule name as an environment variable to the Lambda function
+        user_lambda.add_environment("EVENT_RULE_NAME", event_rule_name)
 
