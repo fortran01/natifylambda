@@ -1,6 +1,13 @@
 import subprocess
 import time
 import json
+import click
+
+@click.command()
+@click.option('--profile', default='default', help='AWS CLI profile to use for deployment.')
+def main(profile):
+    deploy_stack("DownloaderLambdaStack", "cdk.out/0_DownloaderLambdaStack.yaml", profile)
+    deploy_stack("NatifyStack", "cdk.out/1_NatifyStack.yaml", profile, parameters=[{"ParameterKey": "VpcName", "ParameterValue": "Production-VPC"}])
 
 def deploy_stack(stack_name, template_file, profile, parameters=None):
     """
@@ -80,5 +87,4 @@ def deploy_stack(stack_name, template_file, profile, parameters=None):
         time.sleep(10)
 
 if __name__ == "__main__":
-    deploy_stack("DownloaderLambdaStack", "cdk.out/0_DownloaderLambdaStack.yaml", "for-sso")
-    deploy_stack("NatifyStack", "cdk.out/1_NatifyStack.yaml", "for-sso", parameters=[{"ParameterKey": "VpcName", "ParameterValue": "Production-VPC"}])
+    main()
