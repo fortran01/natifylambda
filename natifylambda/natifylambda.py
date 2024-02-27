@@ -2,6 +2,25 @@
 import json
 import boto3
 import os
+# from natifylambda.cdk.nat_instance_construct import NatInstanceConstruct
+from cdk.nat_instance_construct import NatInstanceConstruct
+import aws_cdk as cdk
+import aws_cdk.aws_ec2 as ec2
+
+def launch_nat_instance(vpc_name):
+    app = cdk.App()
+    stack = cdk.Stack(app, "NatInstanceStack")
+    ec2_client = boto3.client('ec2')
+    vpcs = ec2_client.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [vpc_name]}])
+    if vpcs['Vpcs']:
+        vpc_id = vpcs['Vpcs'][0]['VpcId']
+        vpc = ec2.Vpc.from_lookup(stack, "VPC", vpc_id=vpc_id)
+        subnet_id = vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnets[0].subnet_id
+        NatInstanceConstruct(stack, "NatInstance", vpc=vpc, subnet_id=subnet_id)
+        app.synth()
+        print(f"NAT instance launched in VPC: {vpc_name}")
+    else:
+        print(f"VPC with name {vpc_name} not found")
 
 def get_vpc_id(ec2_client, vpc_name):
     vpcs = ec2_client.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [vpc_name]}])
@@ -53,6 +72,8 @@ def handler(event, context):
     state_machine_name = os.environ.get('NATIFYLAMBDA_STATE_MACHINE_NAME')
     event_rule_name = os.environ.get('EVENT_RULE_NAME')  # Use EVENT_RULE_NAME from environment
     
+    launch_nat_instance(vpc_name)
+    
     vpc_id = get_vpc_id(ec2_client, vpc_name)
     if not vpc_id:
         return {
@@ -65,5 +86,5 @@ def handler(event, context):
     
     return {
         'statusCode': 200,
-        'body': json.dumps('Route tables modified and state machine disabled successfully')
+        'body': json.dumps('NAT instance launched, route tables modified and state machine disabled successfully')
     }
