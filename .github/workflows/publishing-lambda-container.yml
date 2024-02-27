@@ -25,17 +25,14 @@ jobs:
             - name: Log in to Amazon ECR
               id: login-ecr
               uses: aws-actions/amazon-ecr-login@v2
-              with:
-                  registry-type: public
 
             - name: Build, tag, and push docker image to Amazon ECR Public
               env:
                   REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-                  REGISTRY_ALIAS: s4f1u2s2
-                  REPOSITORY: natifylambda
+                  REPOSITORY: ${{ secrets.AWS_REPOSITORY_NAME }}
                   IMAGE_TAG: ${{ github.sha }}
               run: |
-                  docker build -t $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG -f natifylambda/Dockerfile .
-                  docker tag $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:latest
-                  docker push $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG
-                  docker push $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:latest
+                  docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f natifylambda/Dockerfile .
+                  docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:latest
+                  docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+                  docker push $REGISTRY/$REPOSITORY:latest
