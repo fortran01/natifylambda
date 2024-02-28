@@ -124,7 +124,7 @@ synth-natifylambda: clean-cdk-out setup-cdk
 # Then we will package the assets and upload to S3 with our own name
 synth: synth-natifylambda
 	@echo $(H1)Synthesizing CloudFormation$(H1END)
-	@LINE_NUM=$$(grep -n '#            code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip"),' cdk/natify_stack.py | cut -d : -f 1); \
+	LINE_NUM=$$(grep -n '#            code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip"),' cdk/natify_stack.py | cut -d : -f 1); \
 	echo "Modifying line: $$LINE_NUM"; \
 	sed -i '' "$${LINE_NUM}s/^#//" cdk/natify_stack.py; \
 	sed -i '' "$$(($$LINE_NUM + 2))s/^/#/" cdk/natify_stack.py; \
