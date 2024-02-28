@@ -43,7 +43,7 @@ def handler(event, context):
     sfn_client = boto3.client('stepfunctions')
     events_client = boto3.client('events')  # Added for disabling the trigger
     vpc_id = os.environ.get('VPC_ID')  # Retrieve VPC ID from environment variable set by CDK stack
-    state_machine_name = os.environ.get('STATE_MACHINE_NAME')
+    state_machine_name = os.environ.get('NATIFYLAMBDA_STATE_MACHINE_NAME')
     event_rule_name = os.environ.get('EVENT_RULE_NAME')
     
     if not vpc_id:
