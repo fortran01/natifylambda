@@ -2,7 +2,6 @@
 import json
 import boto3
 import os
-# from natifylambda.cdk.nat_instance_construct import NatInstanceConstruct
 from cdk.nat_instance_construct import NatInstanceConstruct
 import aws_cdk as cdk
 import aws_cdk.aws_ec2 as ec2
@@ -11,9 +10,8 @@ def launch_nat_instance(vpc_name):
     app = cdk.App()
     stack = cdk.Stack(app, "NatInstanceStack")
     ec2_client = boto3.client('ec2')
-    vpcs = ec2_client.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [vpc_name]}])
-    if vpcs['Vpcs']:
-        vpc_id = vpcs['Vpcs'][0]['VpcId']
+    vpc_id = get_vpc_id(ec2_client, vpc_name)
+    if vpc_id:
         vpc = ec2.Vpc.from_lookup(stack, "VPC", vpc_id=vpc_id)
         subnet_id = vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnets[0].subnet_id
         NatInstanceConstruct(stack, "NatInstance", vpc=vpc, subnet_id=subnet_id)
@@ -23,10 +21,17 @@ def launch_nat_instance(vpc_name):
         print(f"VPC with name {vpc_name} not found")
 
 def get_vpc_id(ec2_client, vpc_name):
-    vpcs = ec2_client.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [vpc_name]}])
-    if vpcs['Vpcs']:
-        return vpcs['Vpcs'][0]['VpcId']
-    else:
+    # Use SSM to get the VPC ID
+    ssm_client = boto3.client('ssm')
+    region = os.environ.get('AWS_REGION')
+    account_id = boto3.client('sts').get_caller_identity().get('Account')
+    parameter_name = f"/accelerator/network/vpc/{vpc_name}/id"
+    parameter_arn = f"arn:aws:ssm:{region}:{account_id}:parameter{parameter_name}"
+    try:
+        parameter = ssm_client.get_parameter(Name=parameter_arn)
+        return parameter['Parameter']['Value']
+    except ssm_client.exceptions.ParameterNotFound:
+        print(f"No VPC ID found for {vpc_name} in SSM Parameter Store")
         return None
 
 def modify_route_tables(ec2_client, vpc_id):

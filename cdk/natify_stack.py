@@ -10,7 +10,7 @@ from aws_cdk import (
     Duration,
     aws_cloudformation as cfn,
     aws_stepfunctions as sfn,
-    aws_stepfunctions_tasks as tasks
+    aws_stepfunctions_tasks as tasks,
 )
 from constructs import Construct
 from natifylambda import __version__ as natifylambda_version
