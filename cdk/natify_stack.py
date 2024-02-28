@@ -96,6 +96,8 @@ class NatifyStack(Stack):
                                 "ec2:DescribeVpcs",
                                 "ec2:DescribeSubnets",
                                 "ec2:ModifySubnetAttribute",
+                                "ec2:DescribeRouteTables",
+                                "ec2:ReplaceRoute",
                                 "lambda:PutFunctionConcurrency",  # Permission to update function concurrency
                                 "states:UpdateStateMachine",  # Added permission to disable the state machine
                                 "states:ListStateMachines",
@@ -191,7 +193,8 @@ class NatifyStack(Stack):
             }),
             vpc=vpc,
             security_group=nat_sg,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            associate_public_ip_address=True
         )
 
         # Disable source/destination checks on the NAT instance
