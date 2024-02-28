@@ -5,34 +5,6 @@ import os
 import aws_cdk as cdk
 import aws_cdk.aws_ec2 as ec2
 
-def launch_nat_instance(vpc_name):
-    app = cdk.App()
-    stack = cdk.Stack(app, "NatInstanceStack")
-    ec2_client = boto3.client('ec2')
-    vpc_id = get_vpc_id(ec2_client, vpc_name)
-    if vpc_id:
-        vpc = ec2.Vpc.from_lookup(stack, "VPC", vpc_id=vpc_id)
-        subnet_id = vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnets[0].subnet_id
-        NatInstanceConstruct(stack, "NatInstance", vpc=vpc, subnet_id=subnet_id)
-        app.synth()
-        print(f"NAT instance launched in VPC: {vpc_name}")
-    else:
-        print(f"VPC with name {vpc_name} not found")
-
-def get_vpc_id(ec2_client, vpc_name):
-    # Use SSM to get the VPC ID
-    ssm_client = boto3.client('ssm')
-    region = os.environ.get('AWS_REGION')
-    account_id = boto3.client('sts').get_caller_identity().get('Account')
-    parameter_name = f"/accelerator/network/vpc/{vpc_name}/id"
-    parameter_arn = f"arn:aws:ssm:{region}:{account_id}:parameter{parameter_name}"
-    try:
-        parameter = ssm_client.get_parameter(Name=parameter_arn)
-        return parameter['Parameter']['Value']
-    except ssm_client.exceptions.ParameterNotFound:
-        print(f"No VPC ID found for {vpc_name} in SSM Parameter Store")
-        return None
-
 def modify_route_tables(ec2_client, vpc_id):
     subnets = ec2_client.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
     for subnet in subnets['Subnets']:
@@ -72,23 +44,28 @@ def handler(event, context):
     ec2_client = boto3.client('ec2')
     sfn_client = boto3.client('stepfunctions')
     events_client = boto3.client('events')  # Added for disabling the trigger
-    vpc_name = os.environ.get('VPC_NAME')
-    state_machine_name = os.environ.get('NATIFYLAMBDA_STATE_MACHINE_NAME')
-    event_rule_name = os.environ.get('EVENT_RULE_NAME')  # Use EVENT_RULE_NAME from environment
+    vpc_id = os.environ.get('VPC_ID')  # Retrieve VPC ID from environment variable set by CDK stack
     
-    launch_nat_instance(vpc_name)
-    
-    vpc_id = get_vpc_id(ec2_client, vpc_name)
     if not vpc_id:
         return {
             'statusCode': 400,
-            'body': json.dumps(f'VPC with name {vpc_name} not found')
+            'body': json.dumps('VPC ID not found in environment variables')
         }
     
     modify_route_tables(ec2_client, vpc_id)
     disable_state_machine(sfn_client, state_machine_name, events_client, event_rule_name)  # Updated to pass event_rule_name
     
+    # Retrieve NAT instance ID from environment variable set by CDK stack
+    nat_instance_id = os.environ.get('NAT_INSTANCE_ID')
+    if not nat_instance_id:
+        return {
+            'statusCode': 400,
+            'body': json.dumps('NAT instance ID not found in environment variables')
+        }
+    
+    print(f"NAT instance ID: {nat_instance_id} used for operations")
+    
     return {
         'statusCode': 200,
-        'body': json.dumps('NAT instance launched, route tables modified and state machine disabled successfully')
+        'body': json.dumps('Route tables modified and state machine disabled successfully')
     }
