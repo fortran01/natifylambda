@@ -126,13 +126,13 @@ synth: synth-natifylambda
 	@echo $(H1)Synthesizing CloudFormation$(H1END)
 	LINE_NUM=$$(grep -n '#            code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip"),' cdk/natify_stack.py | cut -d : -f 1); \
 	echo "Modifying line: $$LINE_NUM"; \
-	sed -i '' "$${LINE_NUM}s/^#//" cdk/natify_stack.py; \
-	sed -i '' "$$(($$LINE_NUM + 2))s/^/#/" cdk/natify_stack.py; \
+	sed -i'' "$${LINE_NUM}s/^#//" cdk/natify_stack.py; \
+	sed -i'' "$$(($$LINE_NUM + 2))s/^/#/" cdk/natify_stack.py; \
 	npx cdk synth DownloaderLambdaStack > cdk.out/0_DownloaderLambdaStack.yaml; \
 	npx cdk synth NatifyStack > cdk.out/1_NatifyStack.yaml; \
 	npx cdk bootstrap --show-template > cdk.out/bootstrap.yaml; \
-	sed -i '' "$${LINE_NUM}s/^/#/" cdk/natify_stack.py; \
-	sed -i '' "$$(($$LINE_NUM + 2))s/^#//" cdk/natify_stack.py
+	sed -i'' "$${LINE_NUM}s/^/#/" cdk/natify_stack.py; \
+	sed -i'' "$$(($$LINE_NUM + 2))s/^#//" cdk/natify_stack.py
 
 release: 
 	@read -p "Increase version: major, minor, or patch? " version_type; \
