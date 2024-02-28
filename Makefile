@@ -7,6 +7,7 @@ ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 VERSION=$(shell sed -n "s/^__version__ = '\(.*\)'/\1/p" $(PROJECT_NAME)/__init__.py)
 H1="\n\n\033[0;32m\#\#\# "
 H1END=" \#\#\# \033[0m\n"
+OS:=$(shell uname -s)
 
 # Only used to create our venv.
 SYSTEM_PYTHON=python3
@@ -124,8 +125,21 @@ synth-natifylambda: clean-cdk-out setup-cdk
 # Then we will package the assets and upload to S3 with our own name
 synth: synth-natifylambda
 	@echo $(H1)Synthesizing CloudFormation$(H1END)
-	LINE_NUM=$$(grep -n '#            code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip"),' cdk/natify_stack.py | cut -d : -f 1); \
+ifeq ($(OS),Darwin) # macOS
+	@echo "Running on macOS"
+	@LINE_NUM=$$(grep -n '#            code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip"),' cdk/natify_stack.py | cut -d : -f 1); \
 	echo "Modifying line: $$LINE_NUM"; \
+	sed -i '' "$${LINE_NUM}s/^#//" cdk/natify_stack.py; \
+	sed -i '' "$$(($$LINE_NUM + 2))s/^/#/" cdk/natify_stack.py && \
+	npx cdk synth DownloaderLambdaStack > cdk.out/0_DownloaderLambdaStack.yaml && \
+	npx cdk synth NatifyStack > cdk.out/1_NatifyStack.yaml && \
+	npx cdk bootstrap --show-template > cdk.out/bootstrap.yaml && \
+	sed -i '' "$${LINE_NUM}s/^/#/" cdk/natify_stack.py && \
+	sed -i '' "$$(($$LINE_NUM + 2))s/^#//" cdk/natify_stack.py
+else # Assuming GNU sed for Linux
+	@echo "Running on Linux"
+	@LINE_NUM=$$(grep -n '#            code=lambda_.S3Code(bucket=s3_bucket, key=f"natifylambda-{natifylambda_version}.zip"),' cdk/natify_stack.py | cut -d : -f 1); \
+	echo "LINE_NUM is $$LINE_NUM"; \
 	sed -i'' "$${LINE_NUM}s/^#//" cdk/natify_stack.py; \
 	sed -i'' "$$(($$LINE_NUM + 2))s/^/#/" cdk/natify_stack.py; \
 	npx cdk synth DownloaderLambdaStack > cdk.out/0_DownloaderLambdaStack.yaml; \
@@ -133,6 +147,7 @@ synth: synth-natifylambda
 	npx cdk bootstrap --show-template > cdk.out/bootstrap.yaml; \
 	sed -i'' "$${LINE_NUM}s/^/#/" cdk/natify_stack.py; \
 	sed -i'' "$$(($$LINE_NUM + 2))s/^#//" cdk/natify_stack.py
+endif
 
 release: 
 	@read -p "Increase version: major, minor, or patch? " version_type; \
