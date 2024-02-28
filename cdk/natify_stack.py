@@ -69,7 +69,7 @@ class NatifyStack(Stack):
         availability_zone = availability_zone_param.value_as_string
 
         # Launch the NAT instance using CDK before defining the Lambda function
-        nat_instance = self.launch_nat_instance(vpc_id, nat_instance_type, public_subnet_id, availability_zone)
+        nat_instance, nat_sg = self.launch_nat_instance(vpc_id, nat_instance_type, public_subnet_id, availability_zone)
 
         # Output the NAT instance ID as a CloudFormation output
         CfnOutput(self, "NatInstanceId", value=nat_instance.instance_id)
@@ -125,7 +125,9 @@ class NatifyStack(Stack):
             environment={
                 "VPC_NAME": vpc_name,
                 "VPC_ID": vpc_id,
-                "NAT_INSTANCE_ID": nat_instance.instance_id  # Add NAT instance ID as an environment variable
+                "NAT_INSTANCE_ID": nat_instance.instance_id,
+                # We use Lambda to allow inbound traffic to the NAT instance
+                "NAT_SG_ID": nat_sg.security_group_id
             }
         )
 
@@ -195,8 +197,7 @@ class NatifyStack(Stack):
             security_group=nat_sg,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             associate_public_ip_address=True,
-            source_dest_check=False
+            source_dest_check=False # not working, we'll use Lambda to disable it
         )
         
-        return nat_instance
-
+        return nat_instance, nat_sg

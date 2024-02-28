@@ -61,6 +61,29 @@ def modify_route_tables(ec2_client, vpc_id, nat_instance_id):
                 f"{nat_instance_id} in route table: {rt['RouteTableId']} ({rt_name})"
             )
 
+def modify_security_group(ec2_client, nat_sg_id, vpc_id):
+    """
+    Modifies the specified security group to allow all inbound traffic from the VPC CIDR block.
+    
+    :param ec2_client: The EC2 client to use for making AWS requests.
+    :param nat_sg_id: The ID of the NAT instance's security group.
+    :param vpc_id: The ID of the VPC.
+    """
+    vpc = ec2_client.describe_vpcs(VpcIds=[vpc_id])
+    vpc_cidr = vpc['Vpcs'][0]['CidrBlock']
+    ec2_client.authorize_security_group_ingress(
+        GroupId=nat_sg_id,
+        IpPermissions=[
+            {
+                'IpProtocol': '-1',
+                'FromPort': -1,
+                'ToPort': -1,
+                'IpRanges': [{'CidrIp': vpc_cidr}]
+            }
+        ]
+    )
+    print(f"Inbound rule added to security group {nat_sg_id} to allow all traffic from VPC CIDR {vpc_cidr}")
+
 def disable_state_machine(sfn_client, state_machine_name, events_client, event_rule_name):
     state_machines = sfn_client.list_state_machines()
     state_machine_arn = None
@@ -90,27 +113,51 @@ def disable_state_machine(sfn_client, state_machine_name, events_client, event_r
     else:
         print(f"State machine {state_machine_name} not found")
 
+def stop_nat_instance_source_dest_check(ec2_client, nat_instance_id):
+    """
+    Stops the source/destination check on the NAT instance to allow it to forward traffic.
+    
+    :param ec2_client: The EC2 client to use for making AWS requests.
+    :param nat_instance_id: The ID of the NAT instance.
+    """
+    ec2_client.modify_instance_attribute(
+        InstanceId=nat_instance_id,
+        SourceDestCheck={'Value': False}
+    )
+    print(f"Source/destination check stopped for NAT instance ID: {nat_instance_id}")
+
 def handler(event, context):
     ec2_client = boto3.client('ec2')
     sfn_client = boto3.client('stepfunctions')
     events_client = boto3.client('events')  # Added for disabling the trigger
-    vpc_id = os.environ.get('VPC_ID')  # Retrieve VPC ID from environment variable set by CDK stack
+    vpc_id = os.environ.get('VPC_ID')
     state_machine_name = os.environ.get('NATIFYLAMBDA_STATE_MACHINE_NAME')
     event_rule_name = os.environ.get('EVENT_RULE_NAME')
-    nat_instance_id = os.environ.get('NAT_INSTANCE_ID')  # Retrieve NAT instance ID from environment variable set by CDK stack
+    nat_instance_id = os.environ.get('NAT_INSTANCE_ID')
+    nat_sg_id = os.environ.get('NAT_SG_ID')
     
-    if not vpc_id or not nat_instance_id:
+    if not vpc_id or not nat_instance_id or not nat_sg_id:
         return {
             'statusCode': 400,
-            'body': json.dumps('VPC ID or NAT instance ID not found in environment variables')
+            'body': json.dumps('VPC ID, NAT instance ID, or NAT security group ID not found in environment variables')
         }
     
     modify_route_tables(ec2_client, vpc_id, nat_instance_id)
+    modify_security_group(ec2_client, nat_sg_id, vpc_id)
     disable_state_machine(sfn_client, state_machine_name, events_client, event_rule_name)
+    stop_nat_instance_source_dest_check(ec2_client, nat_instance_id)
     
-    print(f"NAT instance ID: {nat_instance_id} used for operations")
+    print(f"NAT instance ID: {nat_instance_id} and security group ID: {nat_sg_id} used for operations")
     
     return {
         'statusCode': 200,
-        'body': json.dumps('Route tables modified and state machine disabled successfully')
+        'body': json.dumps({
+            'message': 'Operations completed successfully',
+            'details': {
+                'route_tables': 'modified',
+                'security_group': 'updated',
+                'state_machine': 'disabled',
+                'source_dest_check': 'stopped'
+            }
+        })
     }
