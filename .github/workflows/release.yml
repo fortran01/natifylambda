@@ -30,14 +30,13 @@ jobs:
       - name: Install dependencies
         run: |
             make install
-            make synth-natifylambda
+            make synth
         shell: bash
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: cdk.out/*.zip
+          files: |
+            cdk.out/*.zip
+            cdk.out/*.yaml
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.sha }}
-          release_name: ${{ github.sha }}
-          body: ${{ github.sha }}
