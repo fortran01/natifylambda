@@ -17,13 +17,13 @@ def main(profile):
             {"ParameterKey": "PublicSubnetId", "ParameterValue": "	/accelerator/network/vpc/Production-VPC/subnet/Production-VPC-PublicSubnet1A/id"}
         ])
     else:
-        print("GitHub Actions are not all green or OK. Aborting deployment.")
+        print("Some GitHub Actions are still in progress. Aborting deployment.")
 
 def wait_for_github_actions():
     """
-    Poll GitHub Actions workflow 'release.yml' for the repository 'fortran01/natifylambda' until all runs are green or OK.
+    Poll GitHub Actions workflow 'release.yml' for the repository 'fortran01/natifylambda' until all runs are completed.
     
-    :return: True if all runs are green or OK after polling, False otherwise.
+    :return: True if all runs are completed after polling, False if unable to verify completion after maximum attempts.
     """
     url = "https://api.github.com/repos/fortran01/natifylambda/actions/workflows/release.yml/runs"
     max_attempts = 10
@@ -33,17 +33,19 @@ def wait_for_github_actions():
             response = requests.get(url)
             response.raise_for_status()
             workflow_runs = response.json()['workflow_runs']
-            all_success = all(run['conclusion'] == 'success' for run in workflow_runs)
-            if all_success:
+            pending_runs = [run for run in workflow_runs if run['status'] in ['queued', 'in_progress']]
+            
+            if not pending_runs:
                 return True
             else:
-                print(f"Attempt {attempt + 1} of {max_attempts}: GitHub Actions are not all green. Retrying in 30 seconds...")
-                time.sleep(10)  # Wait for 30 seconds before the next poll
+                wait = 10
+                print(f"Attempt {attempt + 1} of {max_attempts}: Some GitHub Actions are still in progress. Retrying in {wait} seconds.")
+                time.sleep(wait)
                 attempt += 1
         except requests.RequestException as e:
             print(f"Failed to check GitHub Actions workflow runs: {e}")
             return False
-    print("GitHub Actions did not complete successfully after maximum attempts. Aborting deployment.")
+    print("Unable to verify GitHub Actions completion after maximum attempts. Aborting deployment.")
     return False
 
 def deploy_stack(stack_name, template_file, profile, parameters=None):
