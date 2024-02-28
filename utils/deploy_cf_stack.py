@@ -7,8 +7,13 @@ import click
 @click.option('--profile', default='default', help='AWS CLI profile to use for deployment.')
 def main(profile):
     deploy_stack("DownloaderLambdaStack", "cdk.out/0_DownloaderLambdaStack.yaml", profile)
-    deploy_stack("NatifyStack", "cdk.out/1_NatifyStack.yaml", profile, parameters=[{"ParameterKey": "VpcName", "ParameterValue": "Production-VPC"}])
-
+    deploy_stack("NatifyStack", "cdk.out/1_NatifyStack.yaml", profile, parameters=[
+        {"ParameterKey": "VpcName", "ParameterValue": "Production-VPC"},
+        {"ParameterKey": "NatInstanceType", "ParameterValue": "t4g.nano"},
+        {"ParameterKey": "AvailabilityZone", "ParameterValue": "us-west-2a"},
+        {"ParameterKey": "VpcId", "ParameterValue": "/accelerator/network/vpc/Production-VPC/id"},
+        {"ParameterKey": "PublicSubnetId", "ParameterValue": "	/accelerator/network/vpc/Production-VPC/subnet/Production-VPC-PublicSubnet1A/id"}
+    ])
 def deploy_stack(stack_name, template_file, profile, parameters=None):
     """
     Deploy or update a CloudFormation stack and poll its status until completion.

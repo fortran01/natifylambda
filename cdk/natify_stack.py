@@ -32,15 +32,6 @@ class NatifyStack(Stack):
         )
         vpc_name = vpc_name_param.value_as_string
 
-        # Define a CloudFormation parameter for the NAT instance AMI ID with a default value and updated description
-        nat_ami_id_param = CfnParameter(
-            self, "NatAmiId", 
-            type="String", 
-            default="ami-0aac6113247ca0b3f", 
-            description="The AMI ID for the NAT instance. Default is ami-0aac6113247ca0b3f for us-west-2 ARM64 architecture"
-        )
-        nat_ami_id = nat_ami_id_param.value_as_string
-
         # Define a CloudFormation parameter for the NAT instance type, with a default value
         nat_instance_type_param = CfnParameter(
             self, "NatInstanceType", 
@@ -50,29 +41,21 @@ class NatifyStack(Stack):
         )
         nat_instance_type = nat_instance_type_param.value_as_string
 
-        # Convert the VPC ID retrieval to a CloudFormation parameter
+        # CloudFormation parameter for VPC ID retrieval
         vpc_id_param = CfnParameter(
             self, "VpcId",
             type="AWS::SSM::Parameter::Value<String>",
-            default=f"/accelerator/network/vpc/{vpc_name}/id",
-            description="The VPC ID, automatically retrieved from SSM Parameter Store. Parameter name: /accelerator/network/vpc/{vpc_name}/id [cdk:skip]"
+            description=("The VPC ID, automatically retrieved from SSM Parameter Store. "
+                         "Syntax: /accelerator/network/vpc/{vpc_name}/id")
         )
         vpc_id = vpc_id_param.value_as_string
 
-        # Define a CloudFormation parameter for the Public Subnet Name
-        public_subnet_name_param = CfnParameter(
-            self, "PublicSubnetName",
-            type="String",
-            description="The name of the Public Subnet"
-        )
-        public_subnet_name = public_subnet_name_param.value_as_string
-
-        # Convert the Public Subnet ID retrieval to a CloudFormation parameter using the Public Subnet Name
+        # CloudFormation parameter for Public Subnet ID retrieval
         public_subnet_id_param = CfnParameter(
             self, "PublicSubnetId",
             type="AWS::SSM::Parameter::Value<String>",
-            default=f"/accelerator/network/vpc/{vpc_name}/subnet/{public_subnet_name}/id",
-            description=f"The Public Subnet ID, automatically retrieved from SSM Parameter Store. Parameter name: /accelerator/network/vpc/{vpc_name}/subnet/{public_subnet_name}/id [cdk:skip]"
+            description=("The Public Subnet ID, automatically retrieved from SSM Parameter Store. "
+                         "Syntax: /accelerator/network/vpc/{vpc_name}/subnet/{public_subnet_name}/id")
         )
         public_subnet_id = public_subnet_id_param.value_as_string
 
@@ -86,7 +69,7 @@ class NatifyStack(Stack):
         availability_zone = availability_zone_param.value_as_string
 
         # Launch the NAT instance using CDK before defining the Lambda function
-        nat_instance = self.launch_nat_instance(vpc_id, nat_ami_id, nat_instance_type, public_subnet_id, availability_zone)
+        nat_instance = self.launch_nat_instance(vpc_id, nat_instance_type, public_subnet_id, availability_zone)
 
         # Output the NAT instance ID as a CloudFormation output
         CfnOutput(self, "NatInstanceId", value=nat_instance.instance_id)
@@ -184,7 +167,7 @@ class NatifyStack(Stack):
         # Inject the event rule name as an environment variable to the Lambda function
         user_lambda.add_environment("EVENT_RULE_NAME", event_rule_name)
 
-    def launch_nat_instance(self, vpc_id, nat_ami_id, nat_instance_type, public_subnet_id, availability_zone):
+    def launch_nat_instance(self, vpc_id, nat_instance_type, public_subnet_id, availability_zone):
         # Lookup the VPC using the VPC ID
         vpc = ec2.Vpc.from_vpc_attributes(
             self, "Vpc",
@@ -203,7 +186,9 @@ class NatifyStack(Stack):
         nat_instance = ec2.Instance(
             self, "NatInstance",
             instance_type=ec2.InstanceType(nat_instance_type),
-            machine_image=ec2.MachineImage.generic_linux({"us-west-2": nat_ami_id}),
+            machine_image=ec2.MachineImage.generic_linux({
+                "us-west-2": "ami-0aac6113247ca0b3f"
+            }),
             vpc=vpc,
             security_group=nat_sg,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
