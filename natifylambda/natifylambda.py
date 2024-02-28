@@ -45,6 +45,8 @@ def handler(event, context):
     sfn_client = boto3.client('stepfunctions')
     events_client = boto3.client('events')  # Added for disabling the trigger
     vpc_id = os.environ.get('VPC_ID')  # Retrieve VPC ID from environment variable set by CDK stack
+    state_machine_name = os.environ.get('STATE_MACHINE_NAME')
+    event_rule_name = os.environ.get('EVENT_RULE_NAME')
     
     if not vpc_id:
         return {
@@ -53,7 +55,7 @@ def handler(event, context):
         }
     
     modify_route_tables(ec2_client, vpc_id)
-    disable_state_machine(sfn_client, state_machine_name, events_client, event_rule_name)  # Updated to pass event_rule_name
+    disable_state_machine(sfn_client, state_machine_name, events_client, event_rule_name)
     
     # Retrieve NAT instance ID from environment variable set by CDK stack
     nat_instance_id = os.environ.get('NAT_INSTANCE_ID')
