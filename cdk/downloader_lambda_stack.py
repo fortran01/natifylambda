@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_stepfunctions as sfn,
     aws_stepfunctions_tasks as tasks,
     Duration,
+    RemovalPolicy
 )
 from constructs import Construct
 from natifylambda import __version__ as natifylambda_version
@@ -77,6 +78,17 @@ class DownloaderLambdaStack(Stack):
 
         # Add dependency to ensure the state machine is provisioned after the downloader_lambda
         state_machine.node.add_dependency(downloader_lambda)
+        
+        # Define a dummy S3 bucket that depends on the state_machine
+        # to slow down the deployment of the stack
+        dummy_bucket = s3.Bucket(
+            self, "DummyBucket",
+            bucket_name=f"dummy-bucket-{self.account}-{self.region}-{natifylambda_version}",
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        # Add dependency to ensure the dummy bucket is provisioned after the state machine
+        dummy_bucket.node.add_dependency(state_machine)
 
     def get_lambda_code(self) -> str:
         return f"""
