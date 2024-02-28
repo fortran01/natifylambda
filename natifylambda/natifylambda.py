@@ -2,8 +2,6 @@
 import json
 import boto3
 import os
-import aws_cdk as cdk
-import aws_cdk.aws_ec2 as ec2
 
 def modify_route_tables(ec2_client, vpc_id):
     subnets = ec2_client.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
