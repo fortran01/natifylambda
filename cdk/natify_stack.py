@@ -194,10 +194,9 @@ class NatifyStack(Stack):
             vpc=vpc,
             security_group=nat_sg,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            associate_public_ip_address=True
+            associate_public_ip_address=True,
+            source_dest_check=False
         )
-
-        # Disable source/destination checks on the NAT instance
-        nat_instance.source_dest_check = False
-
+        
         return nat_instance
+
