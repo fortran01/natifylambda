@@ -2,7 +2,6 @@
 import json
 import boto3
 import os
-from cdk.nat_instance_construct import NatInstanceConstruct
 import aws_cdk as cdk
 import aws_cdk.aws_ec2 as ec2
 
