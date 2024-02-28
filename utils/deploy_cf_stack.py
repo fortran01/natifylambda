@@ -26,7 +26,7 @@ def wait_for_github_actions():
     :return: True if all runs are completed after polling, False if unable to verify completion after maximum attempts.
     """
     url = "https://api.github.com/repos/fortran01/natifylambda/actions/workflows/release.yml/runs"
-    max_attempts = 10
+    max_attempts = 15
     attempt = 0
     while attempt < max_attempts:
         try:
