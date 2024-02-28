@@ -64,6 +64,7 @@ def modify_route_tables(ec2_client, vpc_id, nat_instance_id):
 def modify_security_group(ec2_client, nat_sg_id, vpc_id):
     """
     Modifies the specified security group to allow all inbound traffic from the VPC CIDR block.
+    Handles the case where the rule already exists.
     
     :param ec2_client: The EC2 client to use for making AWS requests.
     :param nat_sg_id: The ID of the NAT instance's security group.
@@ -71,18 +72,24 @@ def modify_security_group(ec2_client, nat_sg_id, vpc_id):
     """
     vpc = ec2_client.describe_vpcs(VpcIds=[vpc_id])
     vpc_cidr = vpc['Vpcs'][0]['CidrBlock']
-    ec2_client.authorize_security_group_ingress(
-        GroupId=nat_sg_id,
-        IpPermissions=[
-            {
-                'IpProtocol': '-1',
-                'FromPort': -1,
-                'ToPort': -1,
-                'IpRanges': [{'CidrIp': vpc_cidr}]
-            }
-        ]
-    )
-    print(f"Inbound rule added to security group {nat_sg_id} to allow all traffic from VPC CIDR {vpc_cidr}")
+    try:
+        ec2_client.authorize_security_group_ingress(
+            GroupId=nat_sg_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': '-1',
+                    'FromPort': -1,
+                    'ToPort': -1,
+                    'IpRanges': [{'CidrIp': vpc_cidr}]
+                }
+            ]
+        )
+        print(f"Inbound rule added to security group {nat_sg_id} to allow all traffic from VPC CIDR {vpc_cidr}")
+    except ec2_client.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'InvalidPermission.Duplicate':
+            print(f"Rule already exists: Inbound traffic from VPC CIDR {vpc_cidr} is already allowed for security group {nat_sg_id}")
+        else:
+            raise
 
 def disable_state_machine(sfn_client, state_machine_name, events_client, event_rule_name):
     state_machines = sfn_client.list_state_machines()

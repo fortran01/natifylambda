@@ -98,6 +98,8 @@ class NatifyStack(Stack):
                                 "ec2:ModifySubnetAttribute",
                                 "ec2:DescribeRouteTables",
                                 "ec2:ReplaceRoute",
+                                "ec2:AuthorizeSecurityGroupIngress",
+                                "ec2:ModifyInstanceAttribute",
                                 "lambda:PutFunctionConcurrency",  # Permission to update function concurrency
                                 "states:UpdateStateMachine",  # Added permission to disable the state machine
                                 "states:ListStateMachines",
