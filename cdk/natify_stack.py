@@ -212,6 +212,4 @@ class NatifyStack(Stack):
         # Disable source/destination checks on the NAT instance
         nat_instance.source_dest_check = False
 
-        print(f"NAT instance launched with VPC ID: {vpc_id}, AMI ID: {nat_ami_id}, Instance Type: {nat_instance_type}, and Availability Zone: {availability_zone}")
-
         return nat_instance

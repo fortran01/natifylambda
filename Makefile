@@ -142,7 +142,7 @@ release:
 		patch) bump-my-version bump patch ;; \
 		*) echo "Invalid version type. Please specify major, minor, or patch." && exit 1 ;; \
 	esac; \
-	git push --tags
+	git push --follow-tags
 
 ###############################################################################
 # Testing
