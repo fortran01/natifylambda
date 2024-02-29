@@ -41,23 +41,13 @@ class NatifyStack(Stack):
         )
         nat_instance_type = nat_instance_type_param.value_as_string
 
-        # CloudFormation parameter for VPC ID retrieval
-        vpc_id_param = CfnParameter(
-            self, "VpcId",
-            type="AWS::SSM::Parameter::Value<String>",
-            description=("The VPC ID, automatically retrieved from SSM Parameter Store. "
-                         "Syntax: /accelerator/network/vpc/{vpc_name}/id")
+        # CloudFormation parameter for Public Subnet Name
+        public_subnet_name_param = CfnParameter(
+            self, "PublicSubnetName",
+            type="String",
+            description="The name of the Public Subnet"
         )
-        vpc_id = vpc_id_param.value_as_string
-
-        # CloudFormation parameter for Public Subnet ID retrieval
-        public_subnet_id_param = CfnParameter(
-            self, "PublicSubnetId",
-            type="AWS::SSM::Parameter::Value<String>",
-            description=("The Public Subnet ID, automatically retrieved from SSM Parameter Store. "
-                         "Syntax: /accelerator/network/vpc/{vpc_name}/subnet/{public_subnet_name}/id")
-        )
-        public_subnet_id = public_subnet_id_param.value_as_string
+        public_subnet_name = public_subnet_name_param.value_as_string
 
         # Define a CloudFormation parameter for the Availability Zone
         availability_zone_param = CfnParameter(
@@ -67,6 +57,28 @@ class NatifyStack(Stack):
             description="The Availability Zone for the NAT instance"
         )
         availability_zone = availability_zone_param.value_as_string
+
+        # SSM Parameter for VPC ID retrieval
+        vpc_id_param = ssm.StringParameter.from_string_parameter_attributes(
+            self, "VpcId",
+            parameter_name=f"/accelerator/network/vpc/{vpc_name}/id",
+            simple_name=False,
+            # Use a dynamic reference as the representation in CloudFormation template level.
+            # By default, CDK tries to deduce an appropriate representation 
+            # based on the parameter value (a CfnParameter or a dynamic reference).
+            # Use this flag to override the representation when it does not work. 
+            force_dynamic_reference=True
+        )
+        vpc_id = vpc_id_param.string_value
+
+        # SSM Parameter for Public Subnet ID retrieval
+        public_subnet_param = ssm.StringParameter.from_string_parameter_attributes(
+            self, "PublicSubnetId",
+            parameter_name=f"/accelerator/network/vpc/{vpc_name}/subnet/{public_subnet_name}/id",
+            simple_name=False,
+            force_dynamic_reference=True
+        )
+        public_subnet_id = public_subnet_param.string_value
 
         # Launch the NAT instance using CDK before defining the Lambda function
         nat_instance, nat_sg = self.launch_nat_instance(vpc_id, nat_instance_type, public_subnet_id, availability_zone)
@@ -100,6 +112,7 @@ class NatifyStack(Stack):
                                 "ec2:ReplaceRoute",
                                 "ec2:AuthorizeSecurityGroupIngress",
                                 "ec2:ModifyInstanceAttribute",
+                                "ec2:CreateRoute",
                                 "lambda:PutFunctionConcurrency",  # Permission to update function concurrency
                                 "states:UpdateStateMachine",  # Added permission to disable the state machine
                                 "states:ListStateMachines",
