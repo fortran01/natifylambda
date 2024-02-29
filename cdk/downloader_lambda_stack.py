@@ -82,8 +82,8 @@ class DownloaderLambdaStack(Stack):
         # Define a dummy S3 bucket that depends on the state_machine
         # to slow down the deployment of the stack
         dummy_bucket = s3.Bucket(
-            self, "DummyBucket",
-            bucket_name=f"dummy-bucket-{self.account}-{self.region}-{natifylambda_version}",
+            self, "NatifyDummyBucket",
+            bucket_name=f"natify-dummy-bucket-{self.account}-{self.region}-{natifylambda_version}",
             removal_policy=RemovalPolicy.DESTROY
         )
 
@@ -101,7 +101,7 @@ def handler(event, context):
     print(f"Download started at: {{datetime.datetime.now()}}")
     s3 = boto3.client('s3')
     version = os.environ.get("NATIFYLAMBDA_VERSION", "default-version")
-    url = "https://github.com/fortran01/natifylambda/releases/latest/download/natifylambda-{{version}}.zip"
+    url = "https://github.com/fortran01/natifylambda/releases/download/v{{version}}/natifylambda-{{version}}.zip"
     file_name = "/tmp/downloaded.zip"
     urllib.request.urlretrieve(url.format(version=version), file_name)
     print(f"Download completed at: {{datetime.datetime.now()}}")
@@ -115,4 +115,3 @@ def handler(event, context):
         ReservedConcurrentExecutions=0
     )
         """
-
