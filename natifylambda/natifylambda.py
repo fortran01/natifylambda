@@ -38,7 +38,7 @@ def modify_route_tables(ec2_client, vpc_id, nat_instance_id):
             # Check if a route to 0.0.0.0/0 exists
             routes = rt['Routes']
             default_route_exists = any(
-                route['DestinationCidrBlock'] == '0.0.0.0/0' for route in routes
+                route.get('DestinationCidrBlock') == '0.0.0.0/0' for route in routes
             )
             if default_route_exists:
                 # Modify the existing default route to point to the NAT instance
