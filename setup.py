@@ -9,7 +9,6 @@ this_project = __import__(PROJECT_NAME)
 tests_require = ["pytest"]
 dev_require = [
     "pip",
-    "bump2version",
     "wheel",
     "watchdog",
     "flake8",
